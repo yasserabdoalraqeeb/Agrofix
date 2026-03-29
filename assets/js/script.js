@@ -12,7 +12,7 @@ window.addEventListener('scroll', handleHeaderScroll, { passive: true });
 handleHeaderScroll();
 
 // Touch micro-interactions (haptic-like visual feedback)
-const tapSelector = 'button, .btn-primary, .contact-action, .guide-link, .main-nav a, .lang-btn, .product-nav';
+const tapSelector = 'button, .btn-primary, .contact-action, .guide-link, .main-nav a, .lang-toggle, .product-nav';
 document.querySelectorAll(tapSelector).forEach((el) => el.classList.add('tap-feedback'));
 
 let activeTapElement = null;
@@ -887,7 +887,7 @@ const renderNpkBrandDetails = (brandIndex) => {
     return;
   }
 
-  const title = isArabic ? `${activeBrand.brandAr}` : `${activeBrand.brandEn} Details`;
+  const title = isArabic ? `${activeBrand.brandAr}` : `${activeBrand.brandEn}`;
   const subtitle = isArabic
     ? `عدد التركيبات: ${activeBrand.items.length}`
     : `Formulas: ${activeBrand.items.length}`;
@@ -928,7 +928,7 @@ const renderLiquidCatalogDetails = (productIndex) => {
     return;
   }
 
-  const title = isArabic ? `${active.nameAr}` : `${active.nameEn} Details`;
+  const title = isArabic ? `${active.nameAr}` : `${active.nameEn}`;
   const subtitle = isArabic ? 'التركيبة' : 'Formula';
 
   const points = (isArabic ? active.highlightsAr : active.highlightsEn)
@@ -973,7 +973,7 @@ const renderHumicCatalogDetails = (productIndex) => {
     return;
   }
 
-  const title = isArabic ? `${active.nameAr}` : `${active.nameEn} Details`;
+  const title = isArabic ? `${active.nameAr}` : `${active.nameEn}`;
   const subtitle = isArabic ? 'التركيبة' : 'Formula';
 
   const points = (isArabic ? active.highlightsAr : active.highlightsEn)
@@ -1353,8 +1353,8 @@ if (year) {
   year.textContent = new Date().getFullYear();
 }
 
-// Language switcher (EN/AR)
-const langButtons = document.querySelectorAll('.lang-btn');
+// Language switcher (globe toggle)
+const langToggleBtn = document.getElementById('lang-toggle');
 
 const dictionary = {
   en: {
@@ -1362,10 +1362,10 @@ const dictionary = {
     navOpenMenuLabel: 'Open menu',
     navCloseMenuLabel: 'Close menu',
     navHome: 'Home',
-    navAbout: 'About',
+    navAbout: 'About Us',
     navProducts: 'Products',
     navGuidance: 'Guidance',
-    navContact: 'Contact',
+    navContact: 'Contact Us',
     productNpk: 'NPK Fertilizers',
     productLiquid: 'Liquid Fertilizers',
     productHumic: 'Humic',
@@ -1375,13 +1375,13 @@ const dictionary = {
     humicAcid: 'Humic Acid',
     fulvicAcid: 'Fulvic Acid',
     heroEyebrow: '',
-    heroTitle: 'Agrofix United for Agricultural Fertilizers Industry',
+    heroTitle: 'Agrofix United for Agricultural Fertilizers',
     heroSubtext: 'Quality, Excellence, Innovation',
     heroCta: 'Contact Us',
     aboutTitle: 'Why Agrofix United',
     aboutText: 'We combine science, sustainability, and precision manufacturing to achieve the best results.',
     globalQuality: 'Global Quality',
-    globalQualityText: 'We follow international manufacturing standards to deliver high-quality products that exceed our customers expectations in every production stage.',
+    globalQualityText: 'We follow international manufacturing standards to deliver high-quality products that exceed customer expectations at every production stage.',
     envSafety: 'Environmental Safety',
     envSafetyText: 'Eco-friendly formulations balance agricultural needs and soil protection to ensure long-term resource sustainability.',
     innovation: 'Innovation and Development',
@@ -1405,7 +1405,7 @@ const dictionary = {
     humicItem2: 'Fulvic Acid 70%',
     humicItem3: 'Potassium Humate Flakes',
     guidanceTitle: 'Agricultural Guidance',
-    guidanceText: 'We provide expert advice and integrated fertilization programs to ensure plant health and crop quality.',
+    guidanceText: 'We provide expert guidance and integrated fertilization programs to ensure plant health and crop quality.',
     guide1Title: 'Effective Fertilization Strategies',
     guide1Text: 'Nutrient integration: supplying plants with major nutrients NPK and micronutrients such as iron and magnesium for balanced growth. Smart solutions: using controlled-release fertilizers to avoid over-application and ensure a steady nutrient flow. Biological support: activating soil microbes to increase nutrient availability and root absorption.',
     guide1Point1: 'Nutrient integration: supply plants with major nutrients NPK and micronutrients such as iron and magnesium for balanced growth.',
@@ -1444,7 +1444,7 @@ const dictionary = {
     footerText: 'Advanced agricultural fertilizers for sustainable global growth.',
     footerBrand: 'Agrofix United',
     footerTagline: 'We innovate today.. to harvest tomorrow.',
-    footerRights: 'All rights reserved to Agrofix United Agricultural Fertilizers Industry Company',
+    footerRights: 'All rights reserved to Agrofix United for Agricultural Fertilizers Industry.',
     terms: 'Terms of Use',
     privacy: 'Privacy Policy',
     quickLinks: 'Quick Links',
@@ -1560,24 +1560,44 @@ const applyLanguage = (lang) => {
     }
   });
 
-  langButtons.forEach((btn) => {
-    const isActive = btn.dataset.lang === normalizedLang;
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-pressed', String(isActive));
-  });
+  if (langToggleBtn) {
+    const nextLang = normalizedLang === 'ar' ? 'en' : 'ar';
+    const toggleLabel = normalizedLang === 'ar' ? 'التبديل إلى الإنجليزية' : 'Switch to Arabic';
+    const toggleTitle = normalizedLang === 'ar' ? 'English' : 'العربية';
+
+    langToggleBtn.dataset.langLabel = nextLang.toUpperCase();
+    langToggleBtn.setAttribute('aria-label', toggleLabel);
+    langToggleBtn.setAttribute('title', toggleTitle);
+    langToggleBtn.setAttribute('data-next-lang', nextLang);
+  }
 
   refreshProductSliderLanguage();
   updateFormStatusByQuery();
   updateNavigationLabels();
 
-  localStorage.setItem('site-lang', normalizedLang);
+  try {
+    localStorage.setItem('site-lang', normalizedLang);
+  } catch (error) {
+    // Ignore storage errors on restricted hosting/privacy modes.
+  }
 };
 
-langButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    applyLanguage(button.dataset.lang);
+if (langToggleBtn) {
+  langToggleBtn.addEventListener('click', () => {
+    applyLanguage(currentLang === 'ar' ? 'en' : 'ar');
   });
-});
 
-const savedLang = localStorage.getItem('site-lang') || 'ar';
+  langToggleBtn.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    applyLanguage(currentLang === 'ar' ? 'en' : 'ar');
+  });
+}
+
+let savedLang = 'ar';
+try {
+  savedLang = localStorage.getItem('site-lang') || 'ar';
+} catch (error) {
+  // Fallback when localStorage is unavailable.
+}
 applyLanguage(savedLang);

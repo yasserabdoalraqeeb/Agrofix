@@ -115,13 +115,13 @@ body {
   filter: brightness(0.98);
 }
 
-:where(.btn-primary, .lang-btn, .hamburger, .nav-close, .product-nav, .contact-action, .guide-link) {
+:where(.btn-primary, .lang-toggle, .hamburger, .nav-close, .product-nav, .contact-action, .guide-link) {
   min-width: var(--touch-size);
   min-height: var(--touch-size);
 }
 
 @media (pointer: coarse) {
-  :where(button, [role='button'], .btn-primary, .lang-btn, .hamburger, .nav-close, .product-nav, .contact-action, .guide-link,
+  :where(button, [role='button'], .btn-primary, .lang-toggle, .hamburger, .nav-close, .product-nav, .contact-action, .guide-link,
       .main-nav a) {
     min-height: var(--touch-size);
     min-width: var(--touch-size);
@@ -238,7 +238,8 @@ img[loading='lazy'] {
 
 .hero h1 {
   font-size: clamp(1.9rem, 7.2vw, 4.2rem);
-  line-height: 1.14;
+  line-height: 1.2;
+  margin-top: clamp(1.6rem, 4.2vh, 3.2rem);
   text-wrap: balance;
 }
 
@@ -249,6 +250,8 @@ img[loading='lazy'] {
 
 .hero-plant-wrap {
   position: relative;
+  display: grid;
+  place-items: center;
   width: min(100%, 560px);
   margin-inline: auto;
   pointer-events: none;
@@ -272,6 +275,9 @@ img[loading='lazy'] {
 .hero-plant {
   position: relative;
   z-index: 1;
+  display: block;
+  margin-inline: auto;
+  justify-self: center;
   width: clamp(240px, 62vw, 620px);
   filter: drop-shadow(0 10px 22px rgba(19, 55, 25, 0.24));
   animation: heroFloat 6.8s ease-in-out infinite;
@@ -298,7 +304,7 @@ img[loading='lazy'] {
   }
 
   .language-switcher {
-    margin-inline-start: 0;
+    margin-inline-start: auto;
   }
 }
 
@@ -321,7 +327,7 @@ img[loading='lazy'] {
 
   .hero h1 {
     font-size: clamp(1.62rem, 7vw, 2.3rem);
-    line-height: 1.18;
+    line-height: 1.22;
   }
 
   .hero-subtext {
@@ -341,8 +347,19 @@ img[loading='lazy'] {
   }
 
   .hero-content .btn-primary {
-    width: min(100%, 230px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-width: 168px;
+    min-height: 40px;
+    padding: 0.54rem 1rem;
+    font-size: clamp(0.83rem, 3vw, 0.92rem);
+    line-height: 1.2;
+    letter-spacing: 0.01em;
     text-align: center;
+    white-space: nowrap;
+    box-shadow: 0 6px 14px rgba(47, 125, 50, 0.2);
   }
 
   .section-head {
@@ -370,16 +387,20 @@ img[loading='lazy'] {
   }
 
   .hero-content .btn-primary {
-    width: min(100%, 210px);
+    min-width: 146px;
+    min-height: 38px;
+    padding: 0.48rem 0.9rem;
+    font-size: clamp(0.8rem, 3.3vw, 0.88rem);
+    letter-spacing: 0;
   }
 
   .hero {
     padding-bottom: 0.45rem;
   }
 
-  .lang-btn {
-    min-width: 44px;
-    padding-inline: 0.58rem;
+  .lang-toggle {
+    width: 38px;
+    height: 38px;
   }
 }
 
