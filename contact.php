@@ -2,10 +2,21 @@
 
 /**
  * Agrofix United Contact Handler
- * Security-focused contact endpoint with auto-responder email.
+ * Security-focused contact endpoint with PHPMailer SMTP + auto-responder email.
  */
 
 declare(strict_types=1);
+
+use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\PHPMailer;
+
+$autoloadPath = __DIR__ . '/vendor/autoload.php';
+if (!is_file($autoloadPath)) {
+  error_log('PHPMailer autoload not found. Run Composer install.');
+  header('Location: index.html?status=error', true, 303);
+  exit;
+}
+require_once $autoloadPath;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   header('Location: index.html', true, 303);
@@ -43,12 +54,41 @@ if (preg_match($blockedPatterns, $name) || preg_match($blockedPatterns, $email))
 
 $safeReplyEmail = str_replace(["\r", "\n"], '', $email);
 
+// البريد الذي يستقبل رسائل النموذج (إيميل الإدارة)
 $siteEmail = 'Info@agrofixunited.com';
 $recipient = $siteEmail;
-$companyLogo = 'https://dummyimage.com/260x70/ffffff/1f5e24&text=Agrofix+United';
+// ملاحظة: داخل الإيميل يفضّل رابط شعار عام https وليس مسار محلي
+// مثال صحيح: https://your-domain.com/assets/images/logo.png
+$companyLogo = 'assets/images/شعار اجروفيكس .png';
 $socialFacebook = 'https://facebook.com';
 $socialLinkedIn = 'https://linkedin.com';
 $socialInstagram = 'https://instagram.com';
+
+/**
+ * SMTP (Gmail) settings
+ *
+ * ضع البريد وكلمة مرور التطبيق هنا، أو الأفضل عبر متغيرات البيئة:
+ * - AGROFIX_SMTP_USERNAME
+ * - AGROFIX_SMTP_APP_PASSWORD
+ *
+ * ملاحظة: كلمة المرور يجب أن تكون App Password من 16 حرفًا (بدون المسافات).
+ */
+$smtpHost = 'smtp.gmail.com';
+$smtpPort = 587;
+$smtpEncryption = PHPMailer::ENCRYPTION_STARTTLS;
+// ضع هنا بريد Gmail الذي سيُستخدم للإرسال عبر SMTP
+// مثال: info@yourdomain.com أو youraccount@gmail.com
+$smtpUsername = getenv('AGROFIX_SMTP_USERNAME') ?: 'Info@agrofixunited.com';
+// ضع هنا App Password من 16 حرف (من Google) بدون مسافات
+// لا تضع كلمة مرور Gmail العادية
+$smtpAppPassword = getenv('AGROFIX_SMTP_APP_PASSWORD') ?: 'YOUR_16_CHAR_APP_PASSWORD';
+
+$smtpPlaceholdersUsed = str_contains($smtpUsername, 'YOUR_') || str_contains($smtpAppPassword, 'YOUR_');
+if ($smtpPlaceholdersUsed) {
+  error_log('SMTP credentials are placeholders. Set AGROFIX_SMTP_USERNAME and AGROFIX_SMTP_APP_PASSWORD.');
+  header('Location: index.html?status=error', true, 303);
+  exit;
+}
 
 // Main contact email to Agrofix team.
 $subjectAdmin = 'New Contact Request - Agrofix United';
@@ -73,16 +113,6 @@ $adminBody = "
 </body>
 </html>
 ";
-
-$adminHeaders = [
-  'MIME-Version: 1.0',
-  'Content-type: text/html; charset=UTF-8',
-  'From: Agrofix United <' . $siteEmail . '>',
-  'Reply-To: ' . $safeReplyEmail,
-  'X-Mailer: PHP/' . phpversion(),
-];
-
-$adminSent = @mail($recipient, $subjectAdmin, $adminBody, implode("\r\n", $adminHeaders));
 
 // Auto-responder to user.
 $subjectUser = 'Thank you for contacting Agrofix United';
@@ -126,20 +156,56 @@ $userBody = "
 </html>
 ";
 
-$userHeaders = [
-  'MIME-Version: 1.0',
-  'Content-type: text/html; charset=UTF-8',
-  'From: Agrofix United <' . $siteEmail . '>',
-  'Reply-To: ' . $siteEmail,
-  'X-Mailer: PHP/' . phpversion(),
-];
+/**
+ * Configure PHPMailer with shared SMTP settings.
+ */
+$configureMailer = static function (PHPMailer $mailer) use ($smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $smtpAppPassword): void {
+  $mailer->isSMTP();
+  $mailer->Host = $smtpHost;
+  $mailer->Port = $smtpPort;
+  $mailer->SMTPAuth = true;
+  $mailer->Username = $smtpUsername;
+  $mailer->Password = $smtpAppPassword;
+  $mailer->SMTPSecure = $smtpEncryption;
+  $mailer->CharSet = 'UTF-8';
+  $mailer->isHTML(true);
+};
 
-$userSent = @mail($email, $subjectUser, $userBody, implode("\r\n", $userHeaders));
+try {
+  // 1) Admin email
+  $adminMailer = new PHPMailer(true);
+  $configureMailer($adminMailer);
+  $adminMailer->setFrom($smtpUsername, 'Agrofix United');
+  $adminMailer->addAddress($recipient, 'Agrofix Admin');
+  $adminMailer->addReplyTo($safeReplyEmail, $safeName);
+  $adminMailer->Subject = $subjectAdmin;
+  $adminMailer->Body = $adminBody;
+  $adminMailer->AltBody = "New Contact Request - Agrofix United\n"
+    . "Name: {$name}\n"
+    . "Email: {$email}\n"
+    . "Phone: {$phone}\n\n"
+    . "Message:\n{$message}";
+  $adminMailer->send();
 
-if ($adminSent && $userSent) {
+  // 2) Auto-responder email to customer
+  $userMailer = new PHPMailer(true);
+  $configureMailer($userMailer);
+  $userMailer->setFrom($smtpUsername, 'Agrofix United');
+  $userMailer->addAddress($email, $safeName);
+  $userMailer->addReplyTo($siteEmail, 'Agrofix United');
+  $userMailer->Subject = $subjectUser;
+  $userMailer->Body = $userBody;
+  $userMailer->AltBody = "Dear {$name},\n\n"
+    . "Thank you for contacting Agrofix United for Agricultural Fertilizers. "
+    . "We received your message and will get back to you shortly.\n\n"
+    . "For urgent follow-up: {$siteEmail}\n\n"
+    . "Best regards,\nAgrofix United Team";
+  $userMailer->send();
+
   header('Location: index.html?status=sent', true, 303);
   exit;
+} catch (Exception $e) {
+  error_log('PHPMailer error: ' . $e->getMessage());
+  header('Location: index.html?status=error', true, 303);
+  exit;
 }
-
-header('Location: index.html?status=error', true, 303);
-exit;
